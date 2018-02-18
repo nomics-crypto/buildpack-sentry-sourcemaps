@@ -46,7 +46,7 @@ cd "${build}/${SOURCEMAP_DIR}"
 
 ls -al
 
-for map in **/*.js.map; do
+for map in $(find . -name '*.js.map' -not -path './node_modules/*'); do
     sum=$(sha1sum "${map}" | cut -c -40)
     name="${SOURCEMAP_URL_PREFIX}${map}"
     res=($(${JQ} -r ". | map(select(.name == \"${name}\")) | first | .id + \" \" + (.sha1 // \"\")" "${files}"))
