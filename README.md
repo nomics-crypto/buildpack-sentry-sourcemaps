@@ -24,13 +24,39 @@ When viewing your project within Sentry, the organization and project will be fo
 
 When using webpack, babel, or uglifyJS, you need to build the sourcemaps before they will upload. Typically this can be done within your `package.json` file. Example using babel to create sourcemaps with `-s` option. The `heroku-postbuild` step runs after dependencies are downloaded, allowing you to build during the deploy. Read more about [Heroku specific build steps](https://devcenter.heroku.com/articles/nodejs-support#heroku-specific-build-steps).
 
-``` json
-  ...
-  "scripts": {
-    "heroku-postbuild": "mkdir -p dist && babel src -s -D -d dist",
+### Babel
+
+```
+// package.json
+
+"scripts": {
+  "heroku-postbuild": "mkdir -p dist && babel src -s -D -d dist",
+},
+```
+
+### Next.js
+
+```js
+// next.config.js
+
+module.exports = {
+  webpack(config, { dev }) {
+    if (!dev) {
+      config.devtool = 'source-map';
+    }
+
+    return config;
   },
-  ...
- ```
+};
+```
+
+```js
+// package.json
+
+"scripts": {
+  "heroku-postbuild": "next build",
+},
+```
 
 Then add this buildpack to your app:
 
