@@ -43,6 +43,9 @@ curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
 
 # Upload the sourcemaps
 cd "${build}/${SOURCEMAP_DIR}"
+
+ls -al
+
 for map in **/*.js.map; do
     sum=$(sha1sum "${map}" | cut -c -40)
     name="${SOURCEMAP_URL_PREFIX}${map}"
