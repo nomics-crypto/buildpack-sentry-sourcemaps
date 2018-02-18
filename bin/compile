@@ -8,7 +8,7 @@ build=$(cd "$1/" && pwd)
 cache=$(cd "$2/" && pwd)
 env_dir=$(cd "$3/" && pwd)
 
-for key in SOURCEMAP_DIR SOURCEMAP_SENTRY_TOKEN SOURCEMAP_SENTRY_PROJECT SOURCEMAP_URL_PREFIX; do
+for key in SOURCEMAP_SENTRY_TOKEN SOURCEMAP_SENTRY_PROJECT SOURCEMAP_URL_PREFIX; do
     [[ -f "${env_dir}/${key}" ]] && export "$key=$(cat "${env_dir}/${key}")"
     [[ -z "${!key}" ]] && echo "-----> ${key} is missing or empty: unable to continue." && exit 1
 done
@@ -42,14 +42,14 @@ curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
      > "$files"
 
 # Upload the sourcemaps
-cd "${build}/${SOURCEMAP_DIR}"
+cd "${build}/"
 
 ls -al
 
-for map in $(find . -name '*.js.map' -not -path './node_modules/*' | cut -c 2-); do
+for map in $(find . -name '*.js.map' -not -path './node_modules/*'); do
     sum=$(sha1sum "${map}" | cut -c -40)
     echo ${map}
-    name="${SOURCEMAP_URL_PREFIX}${map}"
+    name="${SOURCEMAP_URL_PREFIX}${map | cut -c 2-}"
     echo ${name}
     res=($(${JQ} -r ". | map(select(.name == \"${name}\")) | first | .id + \" \" + (.sha1 // \"\")" "${files}"))
     echo ${res}
