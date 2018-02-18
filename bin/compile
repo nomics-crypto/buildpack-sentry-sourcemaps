@@ -8,7 +8,7 @@ build=$(cd "$1/" && pwd)
 cache=$(cd "$2/" && pwd)
 env_dir=$(cd "$3/" && pwd)
 
-for key in SOURCEMAP_SENTRY_TOKEN SOURCEMAP_SENTRY_PROJECT; do
+for key in SENTRY_AUTH_TOKEN SENTRY_ORG SENTRY_PROJECT; do
     [[ -f "${env_dir}/${key}" ]] && export "$key=$(cat "${env_dir}/${key}")"
     [[ -z "${!key}" ]] && echo "-----> ${key} is missing or empty: unable to continue." && exit 1
 done
@@ -21,14 +21,14 @@ if [[ ! -f "${JQ}" ]]; then
     chmod +x "${JQ}"
 fi
 
-API="https://sentry.io/api/0/projects/${SOURCEMAP_SENTRY_PROJECT}"
+API="https://sentry.io/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}"
 
 # Create a release
-echo "-----> Creating Sentry release ${SOURCE_VERSION} for project ${SOURCEMAP_SENTRY_PROJECT}"
+echo "-----> Creating Sentry release ${SOURCE_VERSION} for organization '${SENTRY_ORG}' in project '${SENTRY_PROJECT}'"
 
 curl -sSf "${API}/releases/" \
   -X POST \
-  -H "Authorization: Bearer ${SOURCEMAP_SENTRY_TOKEN}" \
+  -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
   -H 'Content-Type: application/json' \
   -d "{\"version\": \"${SOURCE_VERSION}\"}" \
   >/dev/null
@@ -38,7 +38,7 @@ files=$(mktemp)
 echo "       Retrieving existing files to $files"
 curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
      -X GET \
-     -H "Authorization: Bearer ${SOURCEMAP_SENTRY_TOKEN}" \
+     -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
      > "$files"
 
 # Upload the sourcemaps
@@ -48,14 +48,14 @@ ls -al
 
 for map in $(find . -name '*.js.map' -not -path './node_modules/*' -not -path './.heroku/*' | cut -c 3-); do
     sum=$(sha1sum "./${map}" | cut -c -40)
-    name="${SOURCEMAP_URL_PREFIX:-~/}${map}"
+    name="~/${map}"
     res=($(${JQ} -r ". | map(select(.name == \"${name}\")) | first | .id + \" \" + (.sha1 // \"\")" "${files}"))
 
     if [[ "${res[0]}" == "" ]]; then
         echo "       Uploading ${map} to Sentry"
         curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
              -X POST \
-             -H "Authorization: Bearer ${SOURCEMAP_SENTRY_TOKEN}" \
+             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
              -F file=@"${map}" \
              -F name="${name}" \
              >/dev/null
@@ -64,11 +64,11 @@ for map in $(find . -name '*.js.map' -not -path './node_modules/*' -not -path '.
         echo "       Updating ${map} on Sentry"
         curl -sSf "${API}/releases/${SOURCE_VERSION}/files/${res[0]}/" \
              -X DELETE \
-             -H "Authorization: Bearer ${SOURCEMAP_SENTRY_TOKEN}" \
+             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
              >/dev/null
         curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
              -X POST \
-             -H "Authorization: Bearer ${SOURCEMAP_SENTRY_TOKEN}" \
+             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
              -F file=@"${map}" \
              -F name="${name}" \
              >/dev/null
