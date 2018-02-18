@@ -34,7 +34,7 @@ When using webpack, babel, or uglifyJS, you need to build the sourcemaps before 
 },
 ```
 
-### Next.js
+### Next.js (version 5+)
 
 ```js
 // next.config.js
