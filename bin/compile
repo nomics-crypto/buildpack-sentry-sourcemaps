@@ -37,15 +37,7 @@ curl -sSf "${API}/releases/" \
 cd "${build}/"
 
 for map in $(find . -name '*.js.map' -not -path './node_modules/*' -not -path './.heroku/*' | cut -c 3-); do
-    sum=$(sha1sum "./${map}" | cut -c -40)
-    name="~/${map}"
-    
-    # Check if we have a '.next' directory for Next.js
-    if [ -d "./.next/" ]; then
-        next_id=$(cat "./.next/BUILD_ID")
-        next_path="~/_next/$next_id/"
-        name="${name/"~/.next/dist/bundles/"/$next_path}"
-    fi
+    name="~/${map/.next/_next}"
 
     echo "       Uploading ${map} to Sentry"
     curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
