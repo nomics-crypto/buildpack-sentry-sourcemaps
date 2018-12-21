@@ -21,7 +21,7 @@ if [[ ! -f "${JQ}" ]]; then
     chmod +x "${JQ}"
 fi
 
-API="https://sentry.io/api/0/projects/${SENTRY_ORG}/${SENTRY_PROJECT}"
+API="https://sentry.io/api/0/organizations/${SENTRY_ORG}"
 
 # Create a release
 echo "-----> Creating Sentry release ${SOURCE_VERSION} for organization '${SENTRY_ORG}' in project '${SENTRY_PROJECT}'"
@@ -30,51 +30,22 @@ curl -sSf "${API}/releases/" \
   -X POST \
   -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
   -H 'Content-Type: application/json' \
-  -d "{\"version\": \"${SOURCE_VERSION}\"}" \
+  -d "{\"version\": \"${SOURCE_VERSION}\", \"projects\": [\"${SENTRY_PROJECT}\"]}" \
   >/dev/null
-
-# Retrieve files
-files=$(mktemp)
-echo "       Retrieving existing files to $files"
-curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
-     -X GET \
-     -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-     > "$files"
 
 # Upload the sourcemaps
 cd "${build}/"
 
 for map in $(find . -name '*.js.map' -not -path './node_modules/*' -not -path './.heroku/*' | cut -c 3-); do
-    sum=$(sha1sum "./${map}" | cut -c -40)
     name="~/${map/.next/_next}"
-   
-    res=($(${JQ} -r ". | map(select(.name == \"${name}\")) | first | .id + \" \" + (.sha1 // \"\")" "${files}"))
 
-    if [[ "${res[0]}" == "" ]]; then
-        echo "       Uploading ${map} to Sentry"
-        curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
-             -X POST \
-             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-             -F file=@"${map}" \
-             -F name="${name}" \
-             >/dev/null
-
-    elif [[ "${res[1]}" != "${sum}" ]]; then
-        echo "       Updating ${map} on Sentry"
-        curl -sSf "${API}/releases/${SOURCE_VERSION}/files/${res[0]}/" \
-             -X DELETE \
-             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-             >/dev/null
-        curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
-             -X POST \
-             -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
-             -F file=@"${map}" \
-             -F name="${name}" \
-             >/dev/null
-
-    else
-        echo "       ${map} is up-to-date"
-    fi
+    echo "       Uploading ${map} to Sentry"
+    curl -sSf "${API}/releases/${SOURCE_VERSION}/files/" \
+        -X POST \
+        -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
+        -F file=@"${map}" \
+        -F name="${name}" \
+        >/dev/null
 
     # remove sourcemap from slug
     echo "       Removing ${map} from slug"
