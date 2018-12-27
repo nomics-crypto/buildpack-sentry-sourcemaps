@@ -52,4 +52,13 @@ for map in $(find . -name '*.js.map' -not -path './node_modules/*' -not -path '.
     rm -f "${map}"
 done
 
+# Create a deploy
+echo "-----> Creating Sentry deploy for ${SOURCE_VERSION}"
+curl "${API}/releases/${SOURCE_VERSION}/deploys/" \
+  -X POST \
+  -H "Authorization: Bearer ${SENTRY_AUTH_TOKEN}" \
+  -H 'Content-Type: application/json' \
+  -d "{ \"environment\": \"production\" }" \
+  >/dev/null
+
 echo "       Done!"
